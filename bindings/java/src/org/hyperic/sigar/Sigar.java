@@ -39,6 +39,7 @@ import org.hyperic.sigar.ptql.ProcessFinder;
 public class Sigar implements SigarProxy {
 
     private static String loadError = null;
+    public static String variant = null;
 
     public static final long FIELD_NOTIMPL = -1;
     public static final int PID_PROC_CPU_CACHE = 1;
@@ -53,7 +54,7 @@ public class Sigar implements SigarProxy {
     /**
      * The Sigar native version.
      */
-    public static final String NATIVE_VERSION_STRING;
+    public static String NATIVE_VERSION_STRING;
     
     /**
      * The scm (svn) revision from which sigar.jar was built.
@@ -64,7 +65,7 @@ public class Sigar implements SigarProxy {
     /**
      * The scm (svn) revision from which the sigar native binary was built.
      */
-    public static final String NATIVE_SCM_REVISION;
+    public static String NATIVE_SCM_REVISION;
 
     /**
      * The date on which sigar.jar was built.
@@ -75,7 +76,7 @@ public class Sigar implements SigarProxy {
     /**
      * The date on which the sigar native binary was built.
      */
-    public static final String NATIVE_BUILD_DATE;
+    public static String NATIVE_BUILD_DATE;
         
     private static boolean enableLogging =
         "true".equals(System.getProperty("sigar.nativeLogging"));
@@ -93,13 +94,12 @@ public class Sigar implements SigarProxy {
 
     private ProcessFinder processFinder = null;
 
-    static {
+    private void getNativeValues() {
         String nativeVersion = "unknown";
         String nativeBuildDate = "unknown";
         String nativeScmRevision = "unknown";
 
         try {
-            loadLibrary();
             nativeVersion = getNativeVersion();
             nativeBuildDate = getNativeBuildDate();
             nativeScmRevision = getNativeScmRevision();
@@ -155,7 +155,7 @@ public class Sigar implements SigarProxy {
         }
     }
 
-    private static void loadLibrary() throws SigarException {
+    private void loadLibrary() throws SigarException {
         try {
             if (SigarLoader.IS_WIN32 &&
                 System.getProperty("os.version").equals("4.0"))
@@ -165,9 +165,14 @@ public class Sigar implements SigarProxy {
                     File.separator + "pdh.dll";
                 loader.systemLoad(lib);
             }
-            loader.load();
-        } catch (ArchNotSupportedException e) {
-            throw new SigarException(e.getMessage());
+//            loader.load();
+            String lib = "sigar" + (Sigar.variant == null ? "" : ("-" + Sigar.variant));
+            System.loadLibrary(lib);
+            if (NATIVE_VERSION_STRING == null) {
+                getNativeValues();
+            }
+//        } catch (ArchNotSupportedException e) {
+//            throw new SigarException(e.getMessage());
         } catch (ArchLoaderException e) {
             throw new SigarException(e.getMessage());
         } catch (UnsatisfiedLinkError e) {
@@ -176,7 +181,7 @@ public class Sigar implements SigarProxy {
     }
 
     public File getNativeLibrary() {
-        return loader.getNativeLibrary();
+        return null; //loader.getNativeLibrary();
     }
 
     /**
@@ -196,6 +201,7 @@ public class Sigar implements SigarProxy {
      */
     public Sigar() {
         try {
+            loadLibrary();
             open();
             this.open = true;
         } catch (SigarException e) {
